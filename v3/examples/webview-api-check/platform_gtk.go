@@ -1,10 +1,10 @@
-//go:build linux
+//go:build linux || freebsd
 
 package main
 
 import "os/exec"
 
-func getLinuxWebViewInfo() string {
+func getGTKWebViewInfo() string {
 	// Try to get WebKitGTK version from pkg-config
 	// For GTK4 builds, this will be webkitgtk-6.0
 	// For GTK3 builds, this will be webkit2gtk-4.1

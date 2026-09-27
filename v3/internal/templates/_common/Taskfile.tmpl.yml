@@ -15,6 +15,7 @@ includes:
   windows: ./build/windows/Taskfile.yml
   darwin: ./build/darwin/Taskfile.yml
   linux: ./build/linux/Taskfile.yml
+  freebsd: ./build/freebsd/Taskfile.yml
   ios: ./build/ios/Taskfile.yml
   android: ./build/android/Taskfile.yml
 

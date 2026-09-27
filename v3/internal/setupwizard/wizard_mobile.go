@@ -89,6 +89,10 @@ func jdkInstallCommand() string {
 		case commandExists("pacman"):
 			return "sudo pacman -S --noconfirm jdk-openjdk"
 		}
+	case "freebsd":
+		if commandExists("pkg") {
+			return "sudo pkg install -y openjdk21"
+		}
 	}
 	return ""
 }
@@ -241,6 +245,8 @@ func osLabel() string {
 		return "macOS"
 	case "windows":
 		return "Windows"
+	case "freebsd":
+		return "FreeBSD"
 	default:
 		return "Linux"
 	}

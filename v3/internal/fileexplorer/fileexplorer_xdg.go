@@ -1,4 +1,4 @@
-//go:build linux
+//go:build linux || freebsd
 
 package fileexplorer
 
@@ -12,6 +12,13 @@ import (
 	"strings"
 	"syscall"
 )
+
+// This backend is the freedesktop one, selected on any host that provides the
+// XDG tooling (xdg-mime to resolve the default handler, xdg-open to fall back
+// on). FreeBSD qualifies: misc/xdg-utils is a small port and the desktop
+// environments that ship it store their entries under the same XDG paths
+// findDesktopFile searches. It is named for the spec it implements rather than
+// for an operating system, so other freedesktop hosts can be added here.
 
 // when possible; the fallback method does not support selecting a file.
 func explorerBinArgs(path string, selectFile bool) (string, []string, error) {

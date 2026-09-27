@@ -1,4 +1,4 @@
-//go:build linux
+//go:build linux || freebsd
 
 package packagemanager
 
@@ -21,6 +21,11 @@ func execCmd(command string, args ...string) (string, error) {
 }
 
 // A list of package manager commands
+//
+// "pkg" is FreeBSD's package manager and is listed last deliberately: it is a
+// short, generic name, so a stray `pkg` on PATH on another OS must not win
+// detection over a real distribution package manager. On FreeBSD none of the
+// others exist, so it is still found.
 var pmcommands = []string{
 	"eopkg",
 	"apt",
@@ -30,6 +35,7 @@ var pmcommands = []string{
 	"zypper",
 	"nix-env",
 	"xbps-install",
+	"pkg",
 }
 
 // commandExists returns true if the given command can be found on the shell
@@ -55,6 +61,8 @@ func Find(osid string) PackageManager {
 
 func newPackageManager(pmname string, osid string) PackageManager {
 	switch pmname {
+	case "pkg":
+		return NewPkg(osid)
 	case "eopkg":
 		return NewEopkg(osid)
 	case "apt":

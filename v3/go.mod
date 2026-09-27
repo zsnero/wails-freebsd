@@ -19,7 +19,7 @@ require (
 	github.com/goreleaser/nfpm/v2 v2.44.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackmordaunt/icns/v2 v2.2.7
-	github.com/jaypipes/ghw v0.21.3
+	github.com/jaypipes/ghw v0.22.0
 	github.com/konoui/lipo v0.10.0
 	github.com/leaanthony/clir v1.7.0
 	github.com/leaanthony/dmg v0.0.0-20260731074841-5c28840cf819
@@ -166,3 +166,5 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	mvdan.cc/sh/v3 v3.12.0 // indirect
 )
+
+replace github.com/atterpac/refresh => github.com/zsnero/refresh v1.1.5

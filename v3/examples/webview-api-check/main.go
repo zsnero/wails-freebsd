@@ -51,8 +51,8 @@ func (s *APICheckService) GetPlatformInfo() PlatformInfo {
 
 	// Platform-specific webview info
 	switch runtime.GOOS {
-	case "linux":
-		info.WebViewInfo = getLinuxWebViewInfo()
+	case "linux", "freebsd":
+		info.WebViewInfo = getGTKWebViewInfo()
 		info.GTKVersion = getGTKVersionInfo()
 	case "darwin":
 		info.WebViewInfo = "WKWebView (WebKit)"

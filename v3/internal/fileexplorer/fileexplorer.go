@@ -37,7 +37,7 @@ func OpenFileManager(path string, selectFile bool) error {
 		// NOTE: Disabling the exit code check on Windows system. Workaround for explorer.exe
 		// exit code handling (https://github.com/microsoft/WSL/issues/6565)
 		ignoreExitCode = true
-	case "darwin", "linux":
+	case "darwin", "linux", "freebsd":
 	default:
 		return errors.New("unsupported platform: " + runtime.GOOS)
 	}
