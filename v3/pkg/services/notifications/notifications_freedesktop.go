@@ -1,4 +1,4 @@
-//go:build linux
+//go:build linux || freebsd
 
 package notifications
 
@@ -17,7 +17,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-type linuxNotifier struct {
+type freedesktopNotifier struct {
 	conn              *dbus.Conn
 	categories        map[string]NotificationCategory
 	categoriesLock    sync.RWMutex
@@ -48,7 +48,7 @@ const (
 // Creates a new Notifications Service.
 func New() *NotificationService {
 	notificationServiceOnce.Do(func() {
-		impl := &linuxNotifier{
+		impl := &freedesktopNotifier{
 			categories:      make(map[string]NotificationCategory),
 			notifications:   make(map[uint32]*notificationData),
 			scheduledTimers: make(map[string]*time.Timer),
@@ -63,7 +63,7 @@ func New() *NotificationService {
 }
 
 // Startup is called when the service is loaded.
-func (ln *linuxNotifier) Startup(ctx context.Context, options application.ServiceOptions) error {
+func (ln *freedesktopNotifier) Startup(ctx context.Context, options application.ServiceOptions) error {
 	ln.appName = application.Get().Config().Name
 
 	conn, err := dbus.ConnectSessionBus()
@@ -87,7 +87,7 @@ func (ln *linuxNotifier) Startup(ctx context.Context, options application.Servic
 }
 
 // Shutdown will save categories and close the D-Bus connection when the service unloads.
-func (ln *linuxNotifier) Shutdown() error {
+func (ln *freedesktopNotifier) Shutdown() error {
 	// Cancel pending scheduled timers before tearing down the D-Bus connection
 	// so their callbacks cannot fire against a closed connection.
 	ln.scheduledLock.Lock()
@@ -113,18 +113,18 @@ func (ln *linuxNotifier) Shutdown() error {
 
 // RequestNotificationAuthorization is a Linux stub that always returns true, nil.
 // (authorization is macOS-specific)
-func (ln *linuxNotifier) RequestNotificationAuthorization() (bool, error) {
+func (ln *freedesktopNotifier) RequestNotificationAuthorization() (bool, error) {
 	return true, nil
 }
 
 // CheckNotificationAuthorization is a Linux stub that always returns true.
 // (authorization is macOS-specific)
-func (ln *linuxNotifier) CheckNotificationAuthorization() (bool, error) {
+func (ln *freedesktopNotifier) CheckNotificationAuthorization() (bool, error) {
 	return true, nil
 }
 
 // SendNotification sends a basic notification with a unique identifier, title, subtitle, and body.
-func (ln *linuxNotifier) SendNotification(options NotificationOptions) error {
+func (ln *freedesktopNotifier) SendNotification(options NotificationOptions) error {
 	if delay, ok := scheduleDelay(options.Schedule); ok && delay > 0 {
 		ln.parkSchedule(options.ID, delay, func() error {
 			opts := options
@@ -148,7 +148,7 @@ func (ln *linuxNotifier) SendNotification(options NotificationOptions) error {
 }
 
 // SendNotificationWithActions sends a notification with additional actions.
-func (ln *linuxNotifier) SendNotificationWithActions(options NotificationOptions) error {
+func (ln *freedesktopNotifier) SendNotificationWithActions(options NotificationOptions) error {
 	ln.categoriesLock.RLock()
 	category, exists := ln.categories[options.CategoryID]
 	ln.categoriesLock.RUnlock()
@@ -190,7 +190,7 @@ func (ln *linuxNotifier) SendNotificationWithActions(options NotificationOptions
 // Attachments / ThreadID / InterruptionLevel onto freedesktop hints, looks up
 // any existing dbusID for options.ID to enable update-by-id via replaces_id,
 // and stores the resulting dbusID for later signal handling and removal.
-func (ln *linuxNotifier) notify(options NotificationOptions, actions []string, actionMap map[string]string) error {
+func (ln *freedesktopNotifier) notify(options NotificationOptions, actions []string, actionMap map[string]string) error {
 	body := options.Body
 	if options.Subtitle != "" {
 		body = options.Subtitle + "\n" + body
@@ -310,7 +310,7 @@ func (ln *linuxNotifier) notify(options NotificationOptions, actions []string, a
 // removes its map entry if it is still the live owner — that guards against a
 // just-fired-but-not-yet-cleaned-up callback racing in to delete the entry
 // for a freshly-parked successor.
-func (ln *linuxNotifier) parkSchedule(id string, delay time.Duration, fire func() error) {
+func (ln *freedesktopNotifier) parkSchedule(id string, delay time.Duration, fire func() error) {
 	ln.scheduledLock.Lock()
 	if existing, ok := ln.scheduledTimers[id]; ok {
 		existing.Stop()
@@ -333,7 +333,7 @@ func (ln *linuxNotifier) parkSchedule(id string, delay time.Duration, fire func(
 
 // cancelScheduled stops and removes any parked timer for id. Safe to call when
 // no timer is parked.
-func (ln *linuxNotifier) cancelScheduled(id string) {
+func (ln *freedesktopNotifier) cancelScheduled(id string) {
 	ln.scheduledLock.Lock()
 	defer ln.scheduledLock.Unlock()
 	if t, ok := ln.scheduledTimers[id]; ok {
@@ -345,7 +345,7 @@ func (ln *linuxNotifier) cancelScheduled(id string) {
 // UpdateNotification re-posts a notification by ID. The Send path passes
 // replaces_id when an existing notification with the same options.ID is
 // tracked, so D-Bus updates in place.
-func (ln *linuxNotifier) UpdateNotification(options NotificationOptions) error {
+func (ln *freedesktopNotifier) UpdateNotification(options NotificationOptions) error {
 	if options.CategoryID != "" {
 		return ln.SendNotificationWithActions(options)
 	}
@@ -353,7 +353,7 @@ func (ln *linuxNotifier) UpdateNotification(options NotificationOptions) error {
 }
 
 // RegisterNotificationCategory registers a new NotificationCategory to be used with SendNotificationWithActions.
-func (ln *linuxNotifier) RegisterNotificationCategory(category NotificationCategory) error {
+func (ln *freedesktopNotifier) RegisterNotificationCategory(category NotificationCategory) error {
 	ln.categoriesLock.Lock()
 	ln.categories[category.ID] = category
 	ln.categoriesLock.Unlock()
@@ -366,7 +366,7 @@ func (ln *linuxNotifier) RegisterNotificationCategory(category NotificationCateg
 }
 
 // RemoveNotificationCategory removes a previously registered NotificationCategory.
-func (ln *linuxNotifier) RemoveNotificationCategory(categoryId string) error {
+func (ln *freedesktopNotifier) RemoveNotificationCategory(categoryId string) error {
 	ln.categoriesLock.Lock()
 	delete(ln.categories, categoryId)
 	ln.categoriesLock.Unlock()
@@ -380,7 +380,7 @@ func (ln *linuxNotifier) RemoveNotificationCategory(categoryId string) error {
 
 // RemoveAllPendingNotifications cancels any in-process scheduled timers AND
 // closes every currently-tracked delivered notification.
-func (ln *linuxNotifier) RemoveAllPendingNotifications() error {
+func (ln *freedesktopNotifier) RemoveAllPendingNotifications() error {
 	ln.scheduledLock.Lock()
 	for id, t := range ln.scheduledTimers {
 		t.Stop()
@@ -404,7 +404,7 @@ func (ln *linuxNotifier) RemoveAllPendingNotifications() error {
 
 // RemovePendingNotification cancels a scheduled timer for the given identifier
 // and/or closes the currently-tracked delivered notification.
-func (ln *linuxNotifier) RemovePendingNotification(identifier string) error {
+func (ln *freedesktopNotifier) RemovePendingNotification(identifier string) error {
 	ln.scheduledLock.Lock()
 	if t, ok := ln.scheduledTimers[identifier]; ok {
 		t.Stop()
@@ -433,22 +433,22 @@ func (ln *linuxNotifier) RemovePendingNotification(identifier string) error {
 }
 
 // RemoveAllDeliveredNotifications functionally equivalent to RemoveAllPendingNotification on Linux.
-func (ln *linuxNotifier) RemoveAllDeliveredNotifications() error {
+func (ln *freedesktopNotifier) RemoveAllDeliveredNotifications() error {
 	return ln.RemoveAllPendingNotifications()
 }
 
 // RemoveDeliveredNotification functionally equivalent RemovePendingNotification on Linux.
-func (ln *linuxNotifier) RemoveDeliveredNotification(identifier string) error {
+func (ln *freedesktopNotifier) RemoveDeliveredNotification(identifier string) error {
 	return ln.RemovePendingNotification(identifier)
 }
 
 // RemoveNotification removes a notification by identifier.
-func (ln *linuxNotifier) RemoveNotification(identifier string) error {
+func (ln *freedesktopNotifier) RemoveNotification(identifier string) error {
 	return ln.RemovePendingNotification(identifier)
 }
 
 // Helper method to close a notification.
-func (ln *linuxNotifier) closeNotification(id uint32) error {
+func (ln *freedesktopNotifier) closeNotification(id uint32) error {
 	obj := ln.conn.Object(dbusNotificationInterface, dbusNotificationPath)
 	call := obj.Call(dbusNotificationInterface+".CloseNotification", 0, id)
 
@@ -459,7 +459,7 @@ func (ln *linuxNotifier) closeNotification(id uint32) error {
 	return nil
 }
 
-func (ln *linuxNotifier) getConfigDir() (string, error) {
+func (ln *freedesktopNotifier) getConfigDir() (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user config directory: %w", err)
@@ -474,7 +474,7 @@ func (ln *linuxNotifier) getConfigDir() (string, error) {
 }
 
 // Save notification categories.
-func (ln *linuxNotifier) saveCategories() error {
+func (ln *freedesktopNotifier) saveCategories() error {
 	configDir, err := ln.getConfigDir()
 	if err != nil {
 		return err
@@ -498,7 +498,7 @@ func (ln *linuxNotifier) saveCategories() error {
 }
 
 // Load notification categories.
-func (ln *linuxNotifier) loadCategories() error {
+func (ln *freedesktopNotifier) loadCategories() error {
 	configDir, err := ln.getConfigDir()
 	if err != nil {
 		return err
@@ -528,7 +528,7 @@ func (ln *linuxNotifier) loadCategories() error {
 }
 
 // Setup signal handling for notification actions.
-func (ln *linuxNotifier) setupSignalHandling(ctx context.Context) error {
+func (ln *freedesktopNotifier) setupSignalHandling(ctx context.Context) error {
 	if err := ln.conn.AddMatchSignal(
 		dbus.WithMatchInterface(dbusNotificationInterface),
 		dbus.WithMatchMember("ActionInvoked"),
@@ -552,7 +552,7 @@ func (ln *linuxNotifier) setupSignalHandling(ctx context.Context) error {
 }
 
 // Handle incoming D-Bus signals.
-func (ln *linuxNotifier) handleSignals(ctx context.Context, c chan *dbus.Signal) {
+func (ln *freedesktopNotifier) handleSignals(ctx context.Context, c chan *dbus.Signal) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -573,7 +573,7 @@ func (ln *linuxNotifier) handleSignals(ctx context.Context, c chan *dbus.Signal)
 }
 
 // Handle ActionInvoked signal.
-func (ln *linuxNotifier) handleActionInvoked(signal *dbus.Signal) {
+func (ln *freedesktopNotifier) handleActionInvoked(signal *dbus.Signal) {
 	if len(signal.Body) < 2 {
 		return
 	}
@@ -629,7 +629,7 @@ func (ln *linuxNotifier) handleActionInvoked(signal *dbus.Signal) {
 // 2 - dismissed by user (click on X)
 // 3 - closed by CloseNotification call
 // 4 - undefined/reserved
-func (ln *linuxNotifier) handleNotificationClosed(signal *dbus.Signal) {
+func (ln *freedesktopNotifier) handleNotificationClosed(signal *dbus.Signal) {
 	if len(signal.Body) < 2 {
 		return
 	}

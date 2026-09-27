@@ -23,9 +23,16 @@ import (
 // that is not there and silently fail to register any shortcut. FreeBSD
 // therefore always takes the X11 path; see global_shortcut_portal_linux.go and
 // global_shortcut_portal_freebsd.go.
+//
+// The call goes through newGlobalShortcutsPortalImpl rather than naming
+// newPortalGlobalShortcuts directly. A build constraint cannot make an
+// unreachable branch stop being a reference: the portal constructor lives in a
+// Linux-only file, so naming it here fails to compile on FreeBSD even though
+// the condition guarding it is false. Routing the call through a per-OS shim
+// keeps the portal symbol out of this file entirely.
 func newGlobalShortcutImpl(manager *GlobalShortcutManager) globalShortcutImpl {
 	if portalGlobalShortcutsSupported && isWaylandSession() {
-		return newPortalGlobalShortcuts(manager)
+		return newGlobalShortcutsPortalImpl(manager)
 	}
 	return newX11GlobalShortcuts(manager)
 }

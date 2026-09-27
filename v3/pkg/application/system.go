@@ -15,6 +15,10 @@ const (
 	// PlatformServer is the headless server build (the "server" build tag),
 	// regardless of the underlying OS.
 	PlatformServer
+	// PlatformFreeBSD is appended rather than grouped with the other desktop
+	// platforms so that the iota values above keep their existing numbers, in
+	// case an app has serialised a Platform or compared them as integers.
+	PlatformFreeBSD
 )
 
 // String returns a human-readable platform name.
@@ -32,6 +36,8 @@ func (p Platform) String() string {
 		return "Android"
 	case PlatformServer:
 		return "Server"
+	case PlatformFreeBSD:
+		return "FreeBSD"
 	default:
 		return "unknown"
 	}
@@ -85,7 +91,7 @@ func (systemManager) IsDesktop() bool {
 		return false
 	}
 	switch runtime.GOOS {
-	case "darwin", "windows", "linux":
+	case "darwin", "windows", "linux", "freebsd":
 		return true
 	default:
 		return false
@@ -98,7 +104,7 @@ func (systemManager) IsDesktop() bool {
 //	if application.System.IsPlatform(application.PlatformMacOS) { ... }
 //
 // PlatformServer matches any OS built with the "server" tag; the OS platforms
-// (macOS/Windows/Linux/iOS/Android) only match native, non-server builds.
+// (macOS/Windows/Linux/FreeBSD/iOS/Android) only match native, non-server builds.
 func (systemManager) IsPlatform(p Platform) bool {
 	if p == PlatformServer {
 		return isServerBuild
@@ -117,6 +123,8 @@ func (systemManager) IsPlatform(p Platform) bool {
 		return runtime.GOOS == "ios"
 	case PlatformAndroid:
 		return runtime.GOOS == "android"
+	case PlatformFreeBSD:
+		return runtime.GOOS == "freebsd"
 	default:
 		return false
 	}

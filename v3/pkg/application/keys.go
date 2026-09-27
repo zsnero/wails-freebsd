@@ -25,7 +25,25 @@ const (
 )
 
 func (m modifier) String() string {
-	return modifierStringMap[runtime.GOOS][m]
+	if table, ok := modifierStringMap[runtime.GOOS]; ok {
+		return table[m]
+	}
+	// Any GOOS without its own table is an X11 desktop, where Cmd is Ctrl and
+	// the Windows key is called Super. Falling back here rather than indexing
+	// the map directly matters: a missing entry yields the zero value, and
+	// accelerator.String() joins modifiers with "+", so an unknown GOOS
+	// silently rendered every shortcut as "+A" instead of "Ctrl+A".
+	return unixModifiers[m]
+}
+
+// unixModifiers holds the naming used by the X11 desktops, which is everything
+// except macOS and Windows.
+var unixModifiers = map[modifier]string{
+	CmdOrCtrlKey:   "Ctrl",
+	ControlKey:     "Ctrl",
+	OptionOrAltKey: "Alt",
+	ShiftKey:       "Shift",
+	SuperKey:       "Super",
 }
 
 var modifierStringMap = map[string]map[modifier]string{
@@ -43,13 +61,8 @@ var modifierStringMap = map[string]map[modifier]string{
 		ShiftKey:       "Shift",
 		SuperKey:       "Cmd",
 	},
-	"linux": {
-		CmdOrCtrlKey:   "Ctrl",
-		ControlKey:     "Ctrl",
-		OptionOrAltKey: "Alt",
-		ShiftKey:       "Shift",
-		SuperKey:       "Super",
-	},
+	"linux":   unixModifiers,
+	"freebsd": unixModifiers,
 }
 
 var modifierMap = map[string]modifier{

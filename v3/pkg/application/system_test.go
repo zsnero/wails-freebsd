@@ -42,6 +42,7 @@ func TestIsPlatform(t *testing.T) {
 		PlatformLinux:   runtime.GOOS == "linux",
 		PlatformIOS:     runtime.GOOS == "ios",
 		PlatformAndroid: runtime.GOOS == "android",
+		PlatformFreeBSD: runtime.GOOS == "freebsd",
 		PlatformServer:  false, // non-server test build
 	}
 	trueCount := 0

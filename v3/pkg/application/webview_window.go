@@ -227,7 +227,11 @@ func (w *WebviewWindow) SetMenu(menu *Menu) {
 		return
 	case "windows":
 		w.options.Windows.Menu = menu
-	case "linux":
+	case "linux", "freebsd":
+		// FreeBSD stores the menu in the Linux options struct because it shares
+		// the GTK3 backend, and the options are what a window is built from, so
+		// skipping this would apply the menu to an existing window's impl but
+		// not record it for anything that reads the options back.
 		w.options.Linux.Menu = menu
 	}
 	if w.impl != nil {

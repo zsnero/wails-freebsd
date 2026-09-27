@@ -47,7 +47,7 @@ import (
 // schedule, zero values, or an At in the past). Used by Windows and Linux
 // backends, which fall back to in-process time.AfterFunc timers because
 // neither has a native deferred-delivery primitive exposed by the libraries
-// we currently depend on (wintoast on Windows, godbus on Linux).
+// we currently depend on (wintoast on Windows, godbus on the X11 desktops).
 func scheduleDelay(s *NotificationSchedule) (time.Duration, bool) {
 	if s == nil {
 		return 0, false

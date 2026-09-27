@@ -42,14 +42,23 @@ var defaultWindowEventMapping = map[string]map[WindowEventType]WindowEventType{
 		Mac.WindowZoomReset:          Common.WindowZoomReset,
 		Mac.WindowShouldClose:        Common.WindowClosing,
 	},
-	"linux": {
-		Linux.WindowDeleteEvent: Common.WindowClosing,
-		Linux.WindowFocusIn:     Common.WindowFocus,
-		Linux.WindowFocusOut:    Common.WindowLostFocus,
-		Linux.WindowDidMove:     Common.WindowDidMove,
-		Linux.WindowDidResize:   Common.WindowDidResize,
-		Linux.WindowLoadFinished: Common.WindowShow,
-	},
+	"linux":   linuxWindowEventMapping,
+	"freebsd": linuxWindowEventMapping,
+}
+
+// linuxWindowEventMapping is shared with FreeBSD, which reports the same GTK
+// window events. It has to be named rather than inlined twice, because
+// DefaultWindowEventMapping indexes by runtime.GOOS and a missing key returns
+// nil: setupEventMapping would then iterate over an empty map and register no
+// window event handlers at all, so close, focus, move, resize and load-finished
+// would never reach the frontend.
+var linuxWindowEventMapping = map[WindowEventType]WindowEventType{
+	Linux.WindowDeleteEvent:  Common.WindowClosing,
+	Linux.WindowFocusIn:      Common.WindowFocus,
+	Linux.WindowFocusOut:     Common.WindowLostFocus,
+	Linux.WindowDidMove:      Common.WindowDidMove,
+	Linux.WindowDidResize:    Common.WindowDidResize,
+	Linux.WindowLoadFinished: Common.WindowShow,
 }
 
 func DefaultWindowEventMapping() map[WindowEventType]WindowEventType {

@@ -20,6 +20,7 @@ var validPlatforms = map[string]bool{
 	"windows": true,
 	"darwin":  true,
 	"linux":   true,
+	"freebsd": true,
 }
 
 // rootDispatchTasks are the verbs that this wrapper routes through the
