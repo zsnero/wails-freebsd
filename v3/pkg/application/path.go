@@ -74,7 +74,7 @@ var paths = map[PathType]string{
 	PathConfigHome:  xdg.ConfigHome,
 	PathStateHome:   xdg.StateHome,
 	PathCacheHome:   xdg.CacheHome,
-	PathRuntimeDir:  xdg.RuntimeDir,
+	PathRuntimeDir:  runtimeDir(),
 	PathDesktop:     xdg.UserDirs.Desktop,
 	PathDownload:    xdg.UserDirs.Download,
 	PathDocuments:   xdg.UserDirs.Documents,
