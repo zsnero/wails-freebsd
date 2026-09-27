@@ -1,4 +1,4 @@
-//go:build linux && cgo && !android
+//go:build (linux || freebsd) && cgo && !android
 
 // Native regression probe for #5963. Each scenario exits nonzero on failure.
 package main
