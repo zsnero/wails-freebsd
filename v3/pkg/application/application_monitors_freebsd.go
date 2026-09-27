@@ -7,18 +7,23 @@ package application
 #include <gtk/gtk.h>
 #include <stdlib.h>
 
-// wails_prefers_dark reports the value of the gtk-application-prefer-dark-theme
-// GtkSetting. That property is what a desktop's "prefer dark" switch ends up
-// setting, on FreeBSD as much as on Linux, and unlike the freedesktop
-// color-scheme portal interface it needs no D-Bus session to read.
-static int wails_prefers_dark(void) {
+// wails_theme_settings reports how the desktop expresses its light/dark
+// preference, and returns 0 when the answer is not available yet.
+//
+// GtkSettings does not exist until GTK has been initialised, and GTK is not
+// initialised until g_application_run: gtk_application_new() only constructs
+// the object. So gtk_settings_get_default() returns NULL for the whole window
+// between process start and the GTK main loop coming up, and a caller that
+// asks too early silently gets "not dark". Callers must ask after startup.
+static int wails_theme_settings(int *prefer_dark, char **theme_name) {
 	GtkSettings *settings = gtk_settings_get_default();
 	if (settings == NULL) {
 		return 0;
 	}
 	gboolean prefer = FALSE;
-	g_object_get(settings, "gtk-application-prefer-dark-theme", &prefer, NULL);
-	return prefer ? 1 : 0;
+	g_object_get(settings, "gtk-application-prefer-dark-theme", &prefer, "gtk-theme-name", theme_name, NULL);
+	*prefer_dark = prefer ? 1 : 0;
+	return 1;
 }
 */
 import "C"
@@ -26,6 +31,8 @@ import "C"
 import (
 	"os"
 	"strings"
+
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // monitorThemeChanges seeds the theme once and then stops.
@@ -42,24 +49,52 @@ import (
 // frontend would render light while the desktop is dark. A theme change made
 // while the app is running needs a restart to be picked up.
 func (a *linuxApp) monitorThemeChanges() {
-	if wailsThemeFromSettings() {
-		a.theme = "dark"
-		return
+	seed := func() {
+		if wailsThemeFromSettings() {
+			a.theme = "dark"
+			return
+		}
+		a.theme = "light"
 	}
-	a.theme = "light"
+
+	// Best effort for the case where something has already forced GTK to
+	// initialise, for example a window built before Run was called.
+	seed()
+
+	// The authoritative read has to wait for ApplicationStartup, which is
+	// emitted once the GTK main loop is running. Reading earlier is the trap
+	// this indirection exists to avoid: it used to happen inline here, and
+	// gtk_settings_get_default() was still NULL, so a dark-themed desktop was
+	// reported as light for the whole session.
+	a.parent.Event.OnApplicationEvent(events.Linux.ApplicationStartup, func(_ *ApplicationEvent) {
+		seed()
+	})
 }
 
-// wailsThemeFromSettings asks GTK first and falls back to GTK_THEME, which
-// covers the case of an app started with an explicit theme on the command line
-// or from a session that sets the variable without touching the GSettings
-// database.
+// wailsThemeFromSettings asks GTK how the desktop is themed, and falls back to
+// GTK_THEME for an app started with an explicit theme on the command line or
+// from a session that sets the variable without touching the settings file.
+//
+// Both signals GTK knows about count. The prefer-dark boolean is what a
+// desktop's "dark mode" switch sets, but a theme name is just as common on
+// the BSDs - a user who picks Gruvbox-Dark or Adwaita-dark in a settings file
+// often leaves the boolean alone, and reading only the boolean would call that
+// a light desktop. Substring-matching the name for "dark" is the same rule
+// isDarkMode() applies to a.theme.
 func wailsThemeFromSettings() bool {
-	if C.wails_prefers_dark() == 1 {
+	var preferDark C.int
+	var themeName *C.char
+	if C.wails_theme_settings(&preferDark, &themeName) == 0 {
+		// GTK is not up yet, so the answer is unknown rather than light.
+		return false
+	}
+	if preferDark == 1 {
+		return true
+	}
+	if themeName != nil && strings.Contains(strings.ToLower(C.GoString(themeName)), "dark") {
 		return true
 	}
 	// GTK_THEME is a colon-separated preference list, e.g. "Adwaita:dark".
-	// Anything carrying "dark" is treated as a dark preference, matching how
-	// isDarkMode classifies the value the portal reports.
 	for _, candidate := range strings.Split(os.Getenv("GTK_THEME"), ":") {
 		if strings.Contains(strings.ToLower(candidate), "dark") {
 			return true
