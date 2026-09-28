@@ -1,3 +1,78 @@
+<p align="center">
+  <img src="https://www.freebsd.org/images/beastie-right.svg" width="96" alt="The BSD Daemon" />
+</p>
+
+## FreeBSD support
+
+[![Go](https://img.shields.io/badge/go-1.25%2B-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
+[![FreeBSD](https://img.shields.io/badge/FreeBSD-15.1%20tested-AB2B3B?style=flat-square&logo=freebsd&logoColor=white)](https://www.freebsd.org)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)](https://github.com/zsnero/wails-freebsd/blob/port/freebsd/LICENSE)
+[![branch](https://img.shields.io/badge/branch-port%2Ffreebsd-8B6CEF?style=flat-square)](https://github.com/zsnero/wails-freebsd/tree/port/freebsd)
+[![Wails](https://img.shields.io/badge/fork%20of-wailsapp%2Fwails-v3.0.0--beta.26-00ADD8?style=flat-square&logo=go&logoColor=white)](https://github.com/wailsapp/wails)
+
+This fork tracks [wailsapp/wails](https://github.com/wailsapp/wails) and adds
+FreeBSD as a target for the Wails v3 desktop framework. The work lives on the
+`port/freebsd` branch; `master` is kept identical to upstream so it stays easy
+to rebase against.
+
+Wails builds on GTK3 and WebKitGTK 4.1, both of which FreeBSD packages, so there
+is no emulation layer involved. The app window, webview, dialogs, menus,
+clipboard, keyboard handling and single-instance locking all work. GTK3 is the
+backend that gets selected, not GTK4. `wails3 doctor` knows about `pkg` and will
+report missing packages.
+
+Known gaps:
+
+- The system tray is a stub. There is no StatusNotifierItem implementation on
+  FreeBSD, so the API is present for apps that guard their tray code, but every
+  call returns `errSystemTrayUnsupported` instead of doing nothing quietly.
+- Global shortcuts use the X11 path. There is no FreeBSD equivalent of the Linux
+  portal backend, so registration is unreliable outside a running session.
+
+Notifications go through the freedesktop backend, which FreeBSD supports.
+
+Yaria, a desktop video and audio downloader, runs on this port. See
+[yaria.live](https://yaria.live).
+
+Issues and pull requests still go to [wailsapp/wails](https://github.com/wailsapp/wails/issues).
+
+### Building and running on FreeBSD
+
+Install the dependencies first. `webkit2-gtk_41` is the GTK3 and libsoup3
+flavour; it is the one that installs `webkit2gtk-4.1.pc`, which is what the cgo
+directives link against. Note the underscore, the port is `www/webkit2-gtk`.
+
+```sh
+sudo pkg install gtk3 webkit2-gtk_41 pkgconf www/npm
+```
+
+Base system has clang, so no compiler package is needed. Then:
+
+```sh
+git clone -b port/freebsd https://github.com/zsnero/wails-freebsd
+cd wails-freebsd/v3
+go build ./...
+go test ./...
+```
+
+The wails3 CLI builds and runs on the port as well:
+
+```sh
+go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+wails3 doctor
+```
+
+`wails3 doctor` reports which of the above are missing and prints the `pkg`
+command to fix them. It knows the difference between a package name and the
+pkg-config module name, which is the usual thing to get wrong here.
+
+To try a real application, the examples in `v3/examples` build and run:
+
+```sh
+cd v3/examples/dev
+wails3 dev
+```
+
 <p align="center" style="text-align: center">
   <img src="./assets/images/logo-universal.png" width="55%"><br/>
 </p>
